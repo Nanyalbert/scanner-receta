@@ -70,6 +70,13 @@ button:focus-visible,label:focus-within,input:focus-visible,summary:focus-visibl
 .manual-link span{color:var(--champagne)}
 .scan-status{display:flex;gap:8px;align-items:start;border:1px solid #434b47;border-radius:5px;background:#292f2d;color:#ecefec;padding:11px 12px;font-size:13px;line-height:1.5;margin:14px 0 0}
 .scan-status svg{flex:none;margin-top:1px}
+.ai-panel{margin-top:15px;border:1px solid #756b55;border-radius:6px;background:#292c28;padding:15px}
+.ai-panel strong{color:#edddbd;font-size:14px}
+.ai-panel p{color:#c1c7bf;font-size:12px;line-height:1.5;margin:6px 0 13px}
+.ai-controls{display:flex;gap:8px}
+.ai-controls input{min-width:0;flex:1;border:1px solid #6e766e;background:#171a18;color:#fff;border-radius:4px;padding:11px;font-size:14px}
+.ai-controls button{border:0;border-radius:4px;background:#cdbb99;color:#1c1e1a;padding:10px 13px;font-size:13px;font-weight:800}
+.ai-controls button:disabled{opacity:.55;cursor:wait}
 .raw-text{margin:12px 0;font-size:13px;color:#e3e6e2}
 .raw-text summary{cursor:pointer}
 .raw-text pre{max-height:140px;overflow:auto;white-space:pre-wrap;background:#101313;padding:11px;border-radius:4px;line-height:1.4}
@@ -152,6 +159,7 @@ button:focus-visible,label:focus-within,input:focus-visible,summary:focus-visibl
   .source-hint{margin-top:20px}
 }
 @media(max-width:620px){
+  .ai-controls{flex-direction:column}
   .topbar{height:62px;padding:0 15px}
   .brand-mark{width:34px;height:34px;font-size:23px}
   .brand strong{font-size:13px}.brand small{font-size:8px}

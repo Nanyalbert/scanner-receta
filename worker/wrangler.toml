@@ -1,0 +1,7 @@
+name = "black-recetas-ai"
+main = "handler.mjs"
+compatibility_date = "2026-09-28"
+
+[vars]
+ALLOWED_ORIGIN = "https://nanyalbert.github.io"
+OPENAI_MODEL = "gpt-5.4"

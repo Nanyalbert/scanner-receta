@@ -1,10 +1,11 @@
 import { asNumber, emptyPrescription, parseDetailedPrescription, suggestAdd, validatePrescription } from "./parser.js";
+import { AI_ENDPOINT } from "./config.js";
 
 const $ = id => document.getElementById(id);
 const fileInputs = ["cameraInput", "fileInput", "cameraAgain", "fileAgain"].map($);
 const fields = ["od-sphere", "od-cylinder", "od-axis", "oi-sphere", "oi-cylinder", "oi-axis", "add",
   "near-od-sphere", "near-od-cylinder", "near-od-axis", "near-oi-sphere", "near-oi-cylinder", "near-oi-axis"];
-const state = { rx: emptyPrescription(), near: emptyPrescription(), nearEnabled: false, type: null, busy: false, confirmed: false, previewUrl: null, options: [] };
+const state = { rx: emptyPrescription(), near: emptyPrescription(), nearEnabled: false, type: null, busy: false, confirmed: false, previewUrl: null, aiSource: null, aiDraft: false, options: [] };
 const sample = {
   od: { sphere: "-2.00", cylinder: "-0.75", axis: "180" },
   oi: { sphere: "-1.75", cylinder: "-0.50", axis: "175" },
@@ -49,9 +50,15 @@ function readInputs() {
 
 function render() {
   const issues = validatePrescription(state.rx, state.type);
+  if (state.aiDraft && state.type && (!state.rx.od.cylinder || !state.rx.oi.cylinder)) {
+    issues.push("La IA no pudo confirmar un cilindro. Revisalo y escribí 0 si la receta indica que no hay cilindro.");
+  }
   const hasNear = state.type === "both" && state.nearEnabled;
   const suggestedAdd = hasNear ? suggestAdd(state.rx, state.near) : null;
   if (hasNear) {
+    if (state.aiDraft && (!state.near.od.cylinder || !state.near.oi.cylinder)) {
+      issues.push("Revisá los cilindros de cerca; la IA dejó un valor sin confirmar.");
+    }
     issues.push(...validatePrescription(state.near, "near").map(issue => `Cerca ${issue}`));
     if (!suggestedAdd && !validatePrescription(state.near, "near").length) {
       issues.push("Lejos y cerca no coinciden en cilindro/eje o ADD entre ojos. Revisá la receta antes de ofrecer un multifocal.");
@@ -83,6 +90,9 @@ function render() {
     return li;
   }));
   $("sourceActions").hidden = !state.previewUrl;
+  $("aiPanel").hidden = !AI_ENDPOINT || !state.previewUrl;
+  $("aiButton").disabled = state.busy;
+  $("aiCode").disabled = state.busy;
   $("uploadEmpty").hidden = Boolean(state.previewUrl);
   $("preview").hidden = !state.previewUrl;
   $("copyButton").hidden = !state.confirmed;
@@ -113,6 +123,7 @@ function invalidate() {
 }
 
 function applyText(text, fromScan = false) {
+  state.aiDraft = false;
   const parsed = parseDetailedPrescription(text);
   state.rx = parsed.far;
   state.near = parsed.near || emptyPrescription();
@@ -199,6 +210,8 @@ async function handleFile(file) {
   setBusy(true);
   if (state.previewUrl?.startsWith("blob:")) URL.revokeObjectURL(state.previewUrl);
   state.previewUrl = null;
+  state.aiSource = null;
+  state.aiDraft = false;
   $("preview").removeAttribute("src");
   state.confirmed = false;
   state.type = null;
@@ -214,6 +227,7 @@ async function handleFile(file) {
     if (pdf) {
       const pdfResult = await readPdf(file);
       showPreview(pdfResult.preview);
+      state.aiSource = pdfResult.preview;
       pages = pdfResult.pages;
       text = pdfResult.text;
       const parsed = parseDetailedPrescription(text).far;
@@ -224,6 +238,7 @@ async function handleFile(file) {
       }
     } else {
       showPreview(URL.createObjectURL(file));
+      state.aiSource = file;
       const result = await recognize(file);
       text = result.text;
       confidence = result.confidence;
@@ -238,6 +253,50 @@ async function handleFile(file) {
     console.error("Lectura de receta:", error);
     setStatus("No se pudo completar la lectura automática. La imagen sigue disponible para cargar los valores a mano.");
   } finally {
+    setBusy(false);
+  }
+}
+
+async function imageForAI() {
+  const image = new Image();
+  image.src = state.previewUrl;
+  await image.decode();
+  const scale = Math.min(1, 2400 / Math.max(image.naturalWidth, image.naturalHeight));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(image.naturalWidth * scale);
+  canvas.height = Math.round(image.naturalHeight * scale);
+  canvas.getContext("2d").drawImage(image, 0, 0, canvas.width, canvas.height);
+  return canvas.toDataURL("image/jpeg", .88);
+}
+
+async function interpretWithAI() {
+  if (!AI_ENDPOINT || !state.aiSource || state.busy) return;
+  const code = $("aiCode").value.trim();
+  if (!code) { setStatus("Ingresá el código de acceso para usar la interpretación con IA."); return; }
+  setBusy(true);
+  setStatus("Interpretando la receta con IA…");
+  try {
+    const image = await imageForAI();
+    const response = await fetch(AI_ENDPOINT, {
+      method: "POST", headers: { "content-type": "application/json", "x-access-code": code },
+      body: JSON.stringify({ image }),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || "No se pudo interpretar la receta");
+    const nearHasData = Boolean(result.near?.od?.sphere || result.near?.oi?.sphere);
+    state.type = result.type === "unknown" ? null : result.type;
+    state.rx = result.type === "near" ? { ...result.near, add: "" } : { ...result.far, add: result.add || "" };
+    state.near = nearHasData && result.type === "both" ? { ...result.near, add: "" } : emptyPrescription();
+    state.nearEnabled = nearHasData && result.type === "both";
+    state.aiDraft = true;
+    syncInputs();
+    invalidate();
+    const warnings = result.uncertain?.length ? ` Revisá especialmente: ${result.uncertain.join(", ")}.` : "";
+    setStatus(`Lectura con IA cargada como borrador. Confirmá cada signo, cilindro y eje con la foto.${warnings}`);
+  } catch (error) {
+    setStatus(error.message || "No se pudo interpretar con IA. Podés completar la receta manualmente.");
+  } finally {
+    $("aiCode").value = "";
     setBusy(false);
   }
 }
@@ -322,6 +381,7 @@ $("zoomButton").addEventListener("click", () => {
   $("imageDialog").showModal();
 });
 $("closeDialog").addEventListener("click", () => $("imageDialog").close());
+$("aiButton").addEventListener("click", interpretWithAI);
 document.querySelectorAll('input[name="rxType"]').forEach(input => input.addEventListener("change", () => {
   state.type = input.value;
   invalidate();
@@ -340,6 +400,7 @@ $("exampleButton").addEventListener("click", () => {
   state.rx = structuredClone(sample);
   state.near = emptyPrescription();
   state.nearEnabled = false;
+  state.aiDraft = false;
   state.type = "both";
   syncInputs();
   invalidate();
@@ -352,6 +413,8 @@ $("reparseButton").addEventListener("click", () => {
 $("clearButton").addEventListener("click", () => {
   if (state.previewUrl?.startsWith("blob:")) URL.revokeObjectURL(state.previewUrl);
   state.previewUrl = null;
+  state.aiSource = null;
+  state.aiDraft = false;
   $("preview").removeAttribute("src");
   $("rawText").value = "";
   $("rawDetails").hidden = true;

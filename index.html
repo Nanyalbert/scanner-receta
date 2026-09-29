@@ -19,7 +19,7 @@
   <div class="workspace">
     <div class="intro">
       <div><p class="eyebrow">ASISTENTE DE MOSTRADOR</p><h1>Una receta. <em>Mejores opciones.</em></h1><p>Interpretá la graduación y compará cristales según lo que necesita el paciente.</p></div>
-      <div class="privacy"><span>PRIVACIDAD</span>La receta se procesa en este dispositivo. No se guarda en un servidor.</div>
+      <div class="privacy"><span>PRIVACIDAD</span>La lectura básica queda en este dispositivo. Si elegís IA, la imagen se envía al servicio de interpretación.</div>
     </div>
     <div class="columns">
       <section class="panel source-panel" aria-labelledby="source-heading">
@@ -46,6 +46,11 @@
           <label class="subtle-button">Otra foto <input id="cameraAgain" type="file" accept="image/*" capture="environment" aria-label="Tomar otra foto"></label>
           <label class="subtle-button">Otro archivo <input id="fileAgain" type="file" aria-label="Elegir otro archivo"></label>
           <button type="button" class="subtle-button" id="clearButton">Limpiar</button>
+        </div>
+        <div class="ai-panel" id="aiPanel" hidden>
+          <strong>Interpretación con IA</strong>
+          <p>Envía esta imagen al servicio de OpenAI para leer la letra manuscrita. Revisá cada valor antes de usarlo.</p>
+          <div class="ai-controls"><input id="aiCode" type="password" autocomplete="off" aria-label="Código de acceso a interpretación con IA" placeholder="Código de acceso"><button type="button" id="aiButton">Interpretar con IA</button></div>
         </div>
         <p role="status" class="scan-status" id="scanStatus" hidden></p>
         <details class="raw-text" id="rawDetails" hidden>
