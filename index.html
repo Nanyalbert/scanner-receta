@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="es-AR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#161819">
+  <meta name="description" content="Asistente interno de Black Óptica para revisar recetas y comparar opciones de cristales.">
+  <title>Black Recetas | Black Óptica</title>
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg">
+  <link rel="stylesheet" href="./styles.css">
+  <script type="module" src="./app.js"></script>
+</head>
+<body>
+<main class="app-shell">
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark">B</span><div><strong>BLACK</strong><small>RECETAS</small></div></div>
+    <span class="internal-label">BLACK ÓPTICA / INTERNO</span>
+  </header>
+  <div class="workspace">
+    <div class="intro">
+      <div><p class="eyebrow">ASISTENTE DE MOSTRADOR</p><h1>Una receta. <em>Mejores opciones.</em></h1><p>Interpretá la graduación y compará cristales según lo que necesita el paciente.</p></div>
+      <div class="privacy"><span>PRIVACIDAD</span>La receta se procesa en este dispositivo. No se guarda en un servidor.</div>
+    </div>
+    <div class="columns">
+      <section class="panel source-panel" aria-labelledby="source-heading">
+        <div class="panel-head"><span class="step">01</span><div><h2 id="source-heading">Receta original</h2><p>Foto, imagen o PDF de una página.</p></div></div>
+        <div class="upload" id="dropZone">
+          <img id="preview" alt="Receta cargada para revisar" hidden>
+          <div class="upload-empty" id="uploadEmpty">
+            <span class="upload-icon" aria-hidden="true">↥</span>
+            <strong>Cargá la receta</strong>
+            <span>Arrastrá una imagen o elegí cómo cargarla</span>
+            <div class="upload-buttons">
+              <label class="upload-action"><span aria-hidden="true">▣</span> Tomar foto
+                <input id="cameraInput" aria-label="Tomar foto de receta" type="file" accept="image/*" capture="environment">
+              </label>
+              <label class="upload-secondary"><span aria-hidden="true">▤</span> Elegir archivo
+                <input id="fileInput" aria-label="Elegir imagen o PDF desde archivos" type="file">
+              </label>
+            </div>
+            <small>JPG, PNG, WEBP o PDF · hasta 15 MB</small>
+          </div>
+        </div>
+        <div class="source-actions" id="sourceActions" hidden>
+          <label class="subtle-button">Otra foto <input id="cameraAgain" type="file" accept="image/*" capture="environment" aria-label="Tomar otra foto"></label>
+          <label class="subtle-button">Otro archivo <input id="fileAgain" type="file" aria-label="Elegir otro archivo"></label>
+          <button type="button" class="subtle-button" id="clearButton">Limpiar</button>
+        </div>
+        <p role="status" class="scan-status" id="scanStatus" hidden></p>
+        <details class="raw-text" id="rawDetails" hidden>
+          <summary>Ver o corregir el texto reconocido</summary>
+          <textarea id="rawText" aria-label="Texto reconocido de la receta" spellcheck="false"></textarea>
+          <button type="button" id="reparseButton" class="reparse-button">Aplicar texto corregido</button>
+        </details>
+        <div class="manual-actions">
+          <button type="button" class="subtle-button manual-link" id="manualButton">Ingresar datos a mano <span aria-hidden="true">↗</span></button>
+          <button type="button" class="subtle-button manual-link" id="exampleButton">Ver un ejemplo <span aria-hidden="true">↗</span></button>
+        </div>
+        <div class="source-hint"><strong>Revisión obligatoria</strong><p>El reconocimiento puede confundir signos, OD/OI, decimales y ejes. Compará cada valor con la receta antes de continuar.</p></div>
+      </section>
+
+      <section class="panel data-panel" aria-labelledby="data-heading">
+        <div class="panel-head"><span class="step">02</span><div><h2 id="data-heading">Verificá la graduación</h2><p>Seleccioná el tipo de receta y revisá ambos ojos.</p></div></div>
+        <fieldset class="usage"><legend>¿Qué indica la receta?</legend>
+          <div class="usage-choices">
+            <label><input type="radio" name="rxType" value="distance"><strong>Solo lejos</strong><small>OD/OI para distancia</small></label>
+            <label><input type="radio" name="rxType" value="near"><strong>Solo cerca</strong><small>OD/OI para lectura</small></label>
+            <label><input type="radio" name="rxType" value="both"><strong>Lejos y cerca</strong><small>OD/OI + ADD</small></label>
+          </div>
+        </fieldset>
+        <div class="rx-table">
+          <div class="rx-header"><span>OJO</span><span>ESFERA</span><span>CILINDRO</span><span>EJE °</span></div>
+          <div class="rx-row"><div class="eye-name"><b>OD</b><small>Derecho</small></div>
+            <label><span class="mobile-label">Esfera</span><input id="od-sphere" inputmode="decimal" aria-label="OD esfera" placeholder="+0.00"></label>
+            <label><span class="mobile-label">Cilindro</span><input id="od-cylinder" inputmode="decimal" aria-label="OD cilindro" placeholder="-0.00"></label>
+            <label><span class="mobile-label">Eje °</span><input id="od-axis" inputmode="numeric" aria-label="OD eje" placeholder="180"></label>
+          </div>
+          <div class="rx-row"><div class="eye-name"><b>OI</b><small>Izquierdo</small></div>
+            <label><span class="mobile-label">Esfera</span><input id="oi-sphere" inputmode="decimal" aria-label="OI esfera" placeholder="+0.00"></label>
+            <label><span class="mobile-label">Cilindro</span><input id="oi-cylinder" inputmode="decimal" aria-label="OI cilindro" placeholder="-0.00"></label>
+            <label><span class="mobile-label">Eje °</span><input id="oi-axis" inputmode="numeric" aria-label="OI eje" placeholder="180"></label>
+          </div>
+        </div>
+        <p class="astig-hint">Ejemplo: <strong>−0,50 × 180°</strong> o <strong>−0,50*180°</strong> significa cilindro −0,50 y eje 180°.</p>
+        <div class="add-row" id="addRow" hidden><label for="add">ADICIÓN / ADD <span>necesaria para lejos y cerca</span></label><input id="add" inputmode="decimal" placeholder="+0.00"></div>
+        <p class="type-note" id="typeNote" hidden></p>
+        <ul class="issues" id="issues" hidden></ul>
+        <button type="button" class="confirm" id="confirmButton" disabled>Confirmar y ver opciones <span aria-hidden="true">→</span></button>
+      </section>
+    </div>
+
+    <section id="results" class="results" aria-live="polite">
+      <div class="results-heading"><div><p class="eyebrow">03 / SELECCIÓN</p><h2>Opciones para el paciente</h2></div><button type="button" class="copy" id="copyButton" hidden>Copiar resumen</button></div>
+      <div class="result-context" id="resultContext" hidden></div>
+      <div class="option-grid" id="optionGrid" hidden></div>
+      <div class="empty-results" id="emptyResults"><p>Elegí el tipo de receta, verificá ambos ojos y confirmá para ver las alternativas.</p></div>
+      <p class="result-foot" id="resultFoot" hidden>Opciones orientativas. Confirmar diseño, rango de fabricación, medidas de montaje, armazón, disponibilidad y precio vigente antes de cotizar.</p>
+    </section>
+  </div>
+</main>
+</body>
+</html>
