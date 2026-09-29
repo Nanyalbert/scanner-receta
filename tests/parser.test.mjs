@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { parsePrescription, validatePrescription } from "../parser.js";
+import { parsePrescription, parseDetailedPrescription, suggestAdd, validatePrescription } from "../parser.js";
 
 const cases = [
   ["OD -2,00 -0,50 x 180°\nOI +1,25 -0,75*90°\nADD +1,75",
@@ -24,4 +24,11 @@ const valid = parsePrescription(cases[0][0]);
 assert.deepEqual(validatePrescription(valid, "both"), []);
 assert.ok(validatePrescription(valid, "near").length === 0);
 assert.ok(validatePrescription({ ...valid, add: "" }, "both").some(x => x.includes("ADD")));
+const handwritten = parseDetailedPrescription(
+  "LEJOS\nO.D.: 10° +0,25 +1,50\nO.I.: 170° +0,25 +1,50\nCERCA\nO.D.: 10° +0,25 +3,50\nO.I.: 170° +0,25 +3,50");
+assert.deepEqual(handwritten.far.od, { sphere: "+1.50", cylinder: "+0.25", axis: "10" });
+assert.deepEqual(handwritten.far.oi, { sphere: "+1.50", cylinder: "+0.25", axis: "170" });
+assert.deepEqual(handwritten.near.od, { sphere: "+3.50", cylinder: "+0.25", axis: "10" });
+assert.equal(handwritten.suggestedAdd, "+2.00");
+assert.equal(suggestAdd(handwritten.far, { ...handwritten.near, oi: { ...handwritten.near.oi, axis: "10" } }), null);
 console.log("Parser y validación: OK");

@@ -42,6 +42,7 @@
           </div>
         </div>
         <div class="source-actions" id="sourceActions" hidden>
+          <button type="button" class="subtle-button" id="zoomButton">Ampliar receta ↗</button>
           <label class="subtle-button">Otra foto <input id="cameraAgain" type="file" accept="image/*" capture="environment" aria-label="Tomar otra foto"></label>
           <label class="subtle-button">Otro archivo <input id="fileAgain" type="file" aria-label="Elegir otro archivo"></label>
           <button type="button" class="subtle-button" id="clearButton">Limpiar</button>
@@ -56,7 +57,7 @@
           <button type="button" class="subtle-button manual-link" id="manualButton">Ingresar datos a mano <span aria-hidden="true">↗</span></button>
           <button type="button" class="subtle-button manual-link" id="exampleButton">Ver un ejemplo <span aria-hidden="true">↗</span></button>
         </div>
-        <div class="source-hint"><strong>Revisión obligatoria</strong><p>El reconocimiento puede confundir signos, OD/OI, decimales y ejes. Compará cada valor con la receta antes de continuar.</p></div>
+        <div class="source-hint"><strong>Revisión obligatoria</strong><p>En recetas manuscritas el OCR puede fallar por completo. Ampliá la foto y completá los valores a mano; no uses el texto transcripto como receta.</p></div>
       </section>
 
       <section class="panel data-panel" aria-labelledby="data-heading">
@@ -81,6 +82,25 @@
             <label><span class="mobile-label">Eje °</span><input id="oi-axis" inputmode="numeric" aria-label="OI eje" placeholder="180"></label>
           </div>
         </div>
+        <label class="near-toggle" id="nearToggleRow" hidden><input type="checkbox" id="nearToggle"> La receta también detalla los valores de cerca</label>
+        <div class="near-section" id="nearSection" hidden>
+          <p>Copiá los valores de cerca tal como figuran. La ADD sugerida se calcula solo si ambos ojos son consistentes.</p>
+          <div class="rx-table">
+            <div class="rx-header"><span>CERCA</span><span>ESFERA</span><span>CILINDRO</span><span>EJE °</span></div>
+            <div class="rx-row"><div class="eye-name"><b>OD</b><small>Derecho</small></div>
+              <label><span class="mobile-label">Esfera</span><input id="near-od-sphere" inputmode="decimal" aria-label="Cerca OD esfera" placeholder="+0.00"></label>
+              <label><span class="mobile-label">Cilindro</span><input id="near-od-cylinder" inputmode="decimal" aria-label="Cerca OD cilindro" placeholder="+0.00"></label>
+              <label><span class="mobile-label">Eje °</span><input id="near-od-axis" inputmode="numeric" aria-label="Cerca OD eje" placeholder="180"></label>
+            </div>
+            <div class="rx-row"><div class="eye-name"><b>OI</b><small>Izquierdo</small></div>
+              <label><span class="mobile-label">Esfera</span><input id="near-oi-sphere" inputmode="decimal" aria-label="Cerca OI esfera" placeholder="+0.00"></label>
+              <label><span class="mobile-label">Cilindro</span><input id="near-oi-cylinder" inputmode="decimal" aria-label="Cerca OI cilindro" placeholder="+0.00"></label>
+              <label><span class="mobile-label">Eje °</span><input id="near-oi-axis" inputmode="numeric" aria-label="Cerca OI eje" placeholder="180"></label>
+            </div>
+          </div>
+          <p class="add-suggestion" id="addSuggestion" hidden></p>
+          <button type="button" class="reparse-button" id="useAddButton" hidden>Usar ADD sugerida</button>
+        </div>
         <p class="astig-hint">Ejemplo: <strong>−0,50 × 180°</strong> o <strong>−0,50*180°</strong> significa cilindro −0,50 y eje 180°.</p>
         <div class="add-row" id="addRow" hidden><label for="add">ADICIÓN / ADD <span>necesaria para lejos y cerca</span></label><input id="add" inputmode="decimal" placeholder="+0.00"></div>
         <p class="type-note" id="typeNote" hidden></p>
@@ -98,5 +118,6 @@
     </section>
   </div>
 </main>
+<dialog id="imageDialog" class="image-dialog" aria-label="Receta ampliada"><button type="button" id="closeDialog" aria-label="Cerrar receta ampliada">Cerrar ×</button><img id="dialogImage" alt="Receta ampliada"></dialog>
 </body>
 </html>

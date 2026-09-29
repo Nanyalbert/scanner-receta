@@ -14,16 +14,16 @@ Después abrí `http://localhost:8000`.
 
 1. Tocá **Tomar foto** para abrir la cámara, o **Elegir archivo** para entrar a Archivos y elegir JPG, PNG, WEBP o PDF (máximo 15 MB). También podés arrastrar un archivo.
 2. Revisá la transcripción. Se puede corregir y volver a interpretar. Si falla la lectura, ingresá OD y OI manualmente.
-3. Elegí **solo lejos**, **solo cerca** o **lejos y cerca**. Para esta última opción, completá la ADD.
+3. Elegí **solo lejos**, **solo cerca** o **lejos y cerca**. Si la receta escribe los valores de cerca en otras dos filas, activá **La receta también detalla los valores de cerca** y cargá ambos ojos. La app puede sugerir la ADD cuando las esferas, cilindros y ejes son consistentes; tenés que confirmarla.
 4. Confirmá cada valor con el documento original antes de ver las opciones. Copiá el resumen si querés usarlo en una conversación de mostrador.
 
-La lectura admite coma decimal, signo negativo, y cilindro/eje escritos como `-0,50 x 180°`, `-0,50 × 180°` o `-0,50*180°`. Los valores dudosos quedan pendientes de revisión; no se infiere una corrección faltante.
+La interpretación del texto admite coma decimal, signo negativo, cilindro/eje escritos como `-0,50 x 180°`, `-0,50 × 180°` o `-0,50*180°`, y filas en orden `eje° cilindro esfera`. Podés ampliar la imagen al cargarla. Los valores dudosos quedan pendientes de revisión; no se infiere una corrección faltante.
 
 ## Alcance y privacidad
 
 La imagen y la interpretación se procesan en el navegador. La app no envía la receta a un servidor ni guarda datos. El motor de OCR Tesseract.js y PDF.js se cargan desde jsDelivr al necesitarlos; el navegador requiere conexión para cargar esos componentes y los modelos de idioma por primera vez.
 
-En PDF se analiza **la primera página**. Si la receta está en otra página, guardá esa página como imagen o PDF independiente. Las opciones son orientativas: los nombres de la línea Smart y los tratamientos sirven para conversar sobre alternativas, sin prometer disponibilidad, rango de fabricación, precio ni beneficio clínico individual. Confirmá diseño, material, medidas, armazón y catálogo vigente con el laboratorio antes de cotizar. La lectura automática puede confundir letras, signos, eje y decimales.
+En PDF se analiza **la primera página**. Si la receta está en otra página, guardá esa página como imagen o PDF independiente. El OCR local puede fallar por completo con letra manuscrita: si la confianza es baja, la app no pasa los números al formulario y requiere ingreso manual sobre la imagen ampliada. Las opciones son orientativas: los nombres de la línea Smart y los tratamientos sirven para conversar sobre alternativas, sin prometer disponibilidad, rango de fabricación, precio ni beneficio clínico individual. Confirmá diseño, material, medidas, armazón y catálogo vigente con el laboratorio antes de cotizar.
 
 ## Desarrollo
 

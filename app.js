@@ -1,9 +1,10 @@
-import { asNumber, emptyPrescription, parsePrescription, validatePrescription } from "./parser.js";
+import { asNumber, emptyPrescription, parseDetailedPrescription, suggestAdd, validatePrescription } from "./parser.js";
 
 const $ = id => document.getElementById(id);
 const fileInputs = ["cameraInput", "fileInput", "cameraAgain", "fileAgain"].map($);
-const fields = ["od-sphere", "od-cylinder", "od-axis", "oi-sphere", "oi-cylinder", "oi-axis", "add"];
-const state = { rx: emptyPrescription(), type: null, busy: false, confirmed: false, previewUrl: null, options: [] };
+const fields = ["od-sphere", "od-cylinder", "od-axis", "oi-sphere", "oi-cylinder", "oi-axis", "add",
+  "near-od-sphere", "near-od-cylinder", "near-od-axis", "near-oi-sphere", "near-oi-cylinder", "near-oi-axis"];
+const state = { rx: emptyPrescription(), near: emptyPrescription(), nearEnabled: false, type: null, busy: false, confirmed: false, previewUrl: null, options: [] };
 const sample = {
   od: { sphere: "-2.00", cylinder: "-0.75", axis: "180" },
   oi: { sphere: "-1.75", cylinder: "-0.50", axis: "175" },
@@ -26,9 +27,11 @@ function syncInputs() {
   for (const eye of ["od", "oi"]) {
     for (const field of ["sphere", "cylinder", "axis"]) {
       $(`${eye}-${field}`).value = state.rx[eye][field];
+      $(`near-${eye}-${field}`).value = state.near[eye][field];
     }
   }
   $("add").value = state.rx.add;
+  $("nearToggle").checked = state.nearEnabled;
   document.querySelectorAll('input[name="rxType"]').forEach(input => {
     input.checked = input.value === state.type;
   });
@@ -38,6 +41,7 @@ function readInputs() {
   for (const eye of ["od", "oi"]) {
     for (const field of ["sphere", "cylinder", "axis"]) {
       state.rx[eye][field] = $(`${eye}-${field}`).value.trim();
+      state.near[eye][field] = $(`near-${eye}-${field}`).value.trim();
     }
   }
   state.rx.add = $("add").value.trim();
@@ -45,10 +49,26 @@ function readInputs() {
 
 function render() {
   const issues = validatePrescription(state.rx, state.type);
+  const hasNear = state.type === "both" && state.nearEnabled;
+  const suggestedAdd = hasNear ? suggestAdd(state.rx, state.near) : null;
+  if (hasNear) {
+    issues.push(...validatePrescription(state.near, "near").map(issue => `Cerca ${issue}`));
+    if (!suggestedAdd && !validatePrescription(state.near, "near").length) {
+      issues.push("Lejos y cerca no coinciden en cilindro/eje o ADD entre ojos. Revisá la receta antes de ofrecer un multifocal.");
+    }
+    if (suggestedAdd && state.rx.add && Math.abs(asNumber(state.rx.add) - asNumber(suggestedAdd)) > .01) {
+      issues.push("La ADD no coincide con la diferencia entre cerca y lejos.");
+    }
+  }
   document.querySelectorAll(".usage-choices label").forEach(label => {
     label.classList.toggle("selected", label.querySelector("input").checked);
   });
   $("addRow").hidden = state.type !== "both";
+  $("nearToggleRow").hidden = state.type !== "both";
+  $("nearSection").hidden = !hasNear;
+  $("addSuggestion").hidden = !suggestedAdd;
+  $("useAddButton").hidden = !suggestedAdd;
+  if (suggestedAdd) $("addSuggestion").textContent = `ADD calculada a partir de las esferas: ${suggestedAdd}. Confirmala con la receta.`;
   const typeNote = state.type === "near"
     ? "OD y OI son valores para cerca. La app no suma una ADD."
     : state.type === "distance" ? "OD y OI son valores para lejos." : "";
@@ -93,12 +113,14 @@ function invalidate() {
 }
 
 function applyText(text, fromScan = false) {
-  const parsed = parsePrescription(text);
-  state.rx = parsed;
-  if (fromScan) state.type = parsed.add ? "both" : null;
+  const parsed = parseDetailedPrescription(text);
+  state.rx = parsed.far;
+  state.near = parsed.near || emptyPrescription();
+  state.nearEnabled = Boolean(parsed.near?.od.sphere || parsed.near?.oi.sphere);
+  if (fromScan) state.type = parsed.far.add || state.nearEnabled ? "both" : null;
   syncInputs();
   invalidate();
-  return Boolean(parsed.od.sphere || parsed.oi.sphere);
+  return Boolean(parsed.far.od.sphere && parsed.far.oi.sphere);
 }
 
 let ocrScriptPromise;
@@ -127,7 +149,7 @@ async function recognize(image) {
   });
   try {
     const result = await worker.recognize(image);
-    return result.data.text.trim();
+    return { text: result.data.text.trim(), confidence: result.data.confidence || 0 };
   } finally {
     await worker.terminate();
   }
@@ -181,28 +203,36 @@ async function handleFile(file) {
   state.confirmed = false;
   state.type = null;
   state.rx = emptyPrescription();
+  state.near = emptyPrescription();
+  state.nearEnabled = false;
   syncInputs();
   $("rawText").value = "";
   $("rawDetails").hidden = true;
   setStatus("Preparando el archivo…");
   try {
-    let text, pages = 1;
+    let text, pages = 1, confidence = 100;
     if (pdf) {
       const pdfResult = await readPdf(file);
       showPreview(pdfResult.preview);
       pages = pdfResult.pages;
       text = pdfResult.text;
-      const parsed = parsePrescription(text);
-      if (!parsed.od.sphere || !parsed.oi.sphere) text = await recognize(pdfResult.canvas);
+      const parsed = parseDetailedPrescription(text).far;
+      if (!parsed.od.sphere || !parsed.oi.sphere) {
+        const result = await recognize(pdfResult.canvas);
+        text = result.text;
+        confidence = result.confidence;
+      }
     } else {
       showPreview(URL.createObjectURL(file));
-      text = await recognize(file);
+      const result = await recognize(file);
+      text = result.text;
+      confidence = result.confidence;
     }
     $("rawText").value = text;
     $("rawDetails").hidden = !text;
-    const found = applyText(text, true);
+    const found = confidence >= 50 && applyText(text, true);
     const pageNote = pages > 1 ? " Se analizó solo la primera página del PDF." : "";
-    if (!found) setStatus("No pude identificar OD/OI con seguridad. Revisá el texto o completá la graduación a mano." + pageNote);
+    if (!found) setStatus("La lectura automática no es confiable para esta foto. Ampliá la receta y cargá los valores a mano; verificá lejos y cerca por separado." + pageNote);
     else setStatus("Lectura preliminar lista. Verificá signos, eje y tipo de receta con el original." + pageNote);
   } catch (error) {
     console.error("Lectura de receta:", error);
@@ -244,6 +274,12 @@ async function copySummary() {
     lines.push(`${key.toUpperCase()}: ESF ${signed(eye.sphere)} / CIL ${signed(eye.cylinder || "0")} / EJE ${eye.axis || "—"}°`);
   }
   if (state.type === "both") lines.push(`ADD: ${signed(state.rx.add)}`);
+  if (state.type === "both" && state.nearEnabled) {
+    for (const key of ["od", "oi"]) {
+      const eye = state.near[key];
+      lines.push(`Cerca ${key.toUpperCase()}: ESF ${signed(eye.sphere)} / CIL ${signed(eye.cylinder || "0")} / EJE ${eye.axis || "—"}°`);
+    }
+  }
   lines.push("", ...state.options.map(option => `• ${option.name}: ${option.benefit}.`), "", "Sujeto a verificación de receta, medidas, stock y disponibilidad del laboratorio.");
   try {
     await navigator.clipboard.writeText(lines.join("\n"));
@@ -270,6 +306,22 @@ $("dropZone").addEventListener("drop", event => {
 for (const id of fields) {
   $(id).addEventListener("input", () => { readInputs(); invalidate(); });
 }
+$("nearToggle").addEventListener("change", event => {
+  state.nearEnabled = event.target.checked;
+  invalidate();
+});
+$("useAddButton").addEventListener("click", () => {
+  const add = suggestAdd(state.rx, state.near);
+  if (!add) return;
+  state.rx.add = add;
+  $("add").value = add;
+  invalidate();
+});
+$("zoomButton").addEventListener("click", () => {
+  $("dialogImage").src = state.previewUrl;
+  $("imageDialog").showModal();
+});
+$("closeDialog").addEventListener("click", () => $("imageDialog").close());
 document.querySelectorAll('input[name="rxType"]').forEach(input => input.addEventListener("change", () => {
   state.type = input.value;
   invalidate();
@@ -286,6 +338,8 @@ $("copyButton").addEventListener("click", copySummary);
 $("manualButton").addEventListener("click", () => $("od-sphere").focus());
 $("exampleButton").addEventListener("click", () => {
   state.rx = structuredClone(sample);
+  state.near = emptyPrescription();
+  state.nearEnabled = false;
   state.type = "both";
   syncInputs();
   invalidate();
@@ -302,6 +356,8 @@ $("clearButton").addEventListener("click", () => {
   $("rawText").value = "";
   $("rawDetails").hidden = true;
   state.rx = emptyPrescription();
+  state.near = emptyPrescription();
+  state.nearEnabled = false;
   state.type = null;
   syncInputs();
   invalidate();

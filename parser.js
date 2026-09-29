@@ -32,6 +32,10 @@ export function parsePrescription(text) {
     const cylinderAxis = section.match(/([+-]?\d{1,2}(?:\.\d{1,2})?)\s*(?:X|\*)\s*(\d{1,3})\s*[°º]?/);
     let sphere = namedSphere, cylinder = namedCylinder, axis = namedAxis;
 
+    // Some ophthalmologists write EJE° + CIL + ESF instead of ESF CIL x EJE.
+    const axisFirst = section.match(/^\s*(\d{1,3})\s*[°º]\s*([+-]\d{1,2}(?:\.\d{1,2})?)\s*([+-]\d{1,2}(?:\.\d{1,2})?)/);
+    if (axisFirst) [axis, cylinder, sphere] = axisFirst.slice(1);
+
     if (cylinderAxis) {
       cylinder = cylinderAxis[1];
       axis = cylinderAxis[2];
@@ -56,6 +60,33 @@ export function parsePrescription(text) {
   const add = source.match(/\b(?:ADD|ADICI[ÓO]N)\s*[:;=]?\s*([+]?[0-4](?:\.\d{1,2})?)/);
   if (add) rx.add = add[1];
   return rx;
+}
+
+export function suggestAdd(far, near) {
+  const differences = [];
+  for (const eye of ["od", "oi"]) {
+    const f = far[eye], n = near[eye];
+    const farSphere = asNumber(f.sphere), nearSphere = asNumber(n.sphere);
+    const farCylinder = asNumber(f.cylinder || "0"), nearCylinder = asNumber(n.cylinder || "0");
+    if (farSphere === null || nearSphere === null || farCylinder === null || nearCylinder === null ||
+      Math.abs(farCylinder - nearCylinder) > 0.01 ||
+      String(f.axis || "") !== String(n.axis || "")) return null;
+    differences.push(nearSphere - farSphere);
+  }
+  if (Math.abs(differences[0] - differences[1]) > 0.01 || differences[0] <= 0 || differences[0] > 4) return null;
+  return `+${differences[0].toFixed(2)}`;
+}
+
+export function parseDetailedPrescription(text) {
+  const source = String(text);
+  const farMarker = /\bLEJOS\b/i.exec(source);
+  const nearMarker = /\bCERCA\b/i.exec(source);
+  if (!farMarker || !nearMarker || nearMarker.index < farMarker.index) {
+    return { far: parsePrescription(source), near: null, suggestedAdd: null };
+  }
+  const far = parsePrescription(source.slice(farMarker.index, nearMarker.index));
+  const near = parsePrescription(source.slice(nearMarker.index));
+  return { far, near, suggestedAdd: suggestAdd(far, near) };
 }
 
 export function validatePrescription(rx, type) {

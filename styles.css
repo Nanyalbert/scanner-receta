@@ -98,6 +98,16 @@ button:focus-visible,label:focus-within,input:focus-visible,summary:focus-visibl
 .add-row label{font-size:12px;font-weight:800;letter-spacing:.07em}
 .add-row label span{display:block;color:#8b908b;font-size:12px;font-weight:400;letter-spacing:0;margin-top:4px}
 .add-row input{width:130px}
+.near-toggle{display:flex;align-items:center;gap:9px;margin-top:16px;padding:13px;background:#f7f7f3;border:1px solid #e3e5df;border-radius:5px;font-size:13px;font-weight:700;cursor:pointer}
+.near-toggle input{width:18px;height:18px;accent-color:#1c2020}
+.near-section{margin-top:12px}
+.near-section>p{font-size:12px;line-height:1.5;color:#6d746d;margin:0 0 10px}
+.near-section .add-suggestion{color:#343b35;margin:10px 0 6px}
+.near-section .reparse-button{background:#292e2b}
+.image-dialog{max-width:min(96vw,1100px);max-height:95vh;padding:12px;background:#171a19;border:1px solid #525a54;border-radius:8px;color:#fff}
+.image-dialog::backdrop{background:rgba(0,0,0,.84)}
+.image-dialog button{display:block;margin:0 0 10px auto;background:#343b37;color:#fff;border:1px solid #747d75;border-radius:4px;padding:9px 13px}
+.image-dialog img{display:block;max-width:100%;max-height:calc(95vh - 75px);object-fit:contain}
 .usage{border:0;margin:0;padding:0}
 .usage legend{float:left;width:100%;font-size:15px;font-weight:700;margin-bottom:13px}
 .usage-choices{clear:both;display:flex;gap:8px}
